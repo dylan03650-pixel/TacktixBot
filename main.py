@@ -6,7 +6,10 @@ from database import init_db, get_or_create_user, is_subscribed, activate_subscr
 from football_data import get_todays_fixtures
 from ai_predictor import generate_analysis, get_trending_picks
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
     [
@@ -16,6 +19,7 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -37,6 +41,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Subscribe monthly to unlock full analysis & trending picks."
     )
     await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD, parse_mode="HTML")
+
 
 async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -129,11 +134,12 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("Invalid number. Please try again.")
 
+
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Demo command to activate subscription without payment"""
     user_id = update.effective_user.id
     activate_subscription(user_id)
     await update.message.reply_text("✅ Subscription activated for 30 days! (Demo mode)")
+
 
 def main():
     init_db()
@@ -145,6 +151,7 @@ def main():
 
     print("Bot is starting...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 if __name__ == "__main__":
     main()
