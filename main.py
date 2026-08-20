@@ -6,10 +6,7 @@ from database import init_db, get_or_create_user, is_subscribed, activate_subscr
 from football_data import get_todays_fixtures
 from ai_predictor import generate_analysis, get_trending_picks
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
     [
@@ -19,7 +16,6 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
-
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -35,13 +31,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     get_or_create_user(user.id, user.username, user.first_name, referred_by)
 
-    text = (
-        f"⚽ Welcome to <b>AI Football Predictor</b>, {user.first_name}!\n\n"
-        "Daily AI analysis on the top 30 football leagues.\n"
-        "Subscribe monthly to unlock full analysis & trending picks."
-    )
+    text = f"⚽ Welcome to <b>AI Football Predictor</b>, {user.first_name}!\n\nDaily AI analysis on the top 30 football leagues.\nSubscribe monthly to unlock full analysis & trending picks."
     await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD, parse_mode="HTML")
-
 
 async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -50,14 +41,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "💰 Deposit":
         status = "✅ Active" if is_subscribed(user_id) else "❌ Not subscribed"
-        msg = (
-            f"<b>💰 Deposit / Subscription</b>\n\n"
-            f"Monthly Price: <b>$9.99</b>\n"
-            f"Your status: {status}\n\n"
-            "To activate (demo mode):\n"
-            "Send /subscribe\n\n"
-            "In real version you will pay with card/crypto here."
-        )
+        msg = f"<b>💰 Deposit / Subscription</b>\n\nMonthly Price: <b>$9.99</b>\nYour status: {status}\n\nTo activate (demo mode):\nSend /subscribe\n\nIn real version you will pay with card/crypto here."
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "🔗 Referral":
@@ -65,13 +49,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_username = (await context.bot.get_me()).username
         link = f"https://t.me/{bot_username}?start=ref_{code}"
         count = user["referral_count"]
-        msg = (
-            f"<b>🔗 Your Referral Program</b>\n\n"
-            f"Your unique link:\n<code>{link}</code>\n\n"
-            f"People invited: <b>{count}</b>\n"
-            f"Invite <b>30</b> friends → Get <b>15% off</b> forever\n\n"
-            "Share the link with friends!"
-        )
+        msg = f"<b>🔗 Your Referral Program</b>\n\nYour unique link:\n<code>{link}</code>\n\nPeople invited: <b>{count}</b>\nInvite <b>30</b> friends → Get <b>15% off</b> forever\n\nShare the link with friends!"
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "📊 Analyse":
@@ -105,24 +83,12 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         msg = "<b>🔥 AI Trending Offers (Highest Confidence)</b>\n\n"
         for p in picks:
-            msg += (
-                f"⚽ <b>{p['match']}</b>\n"
-                f"🏆 {p['league']}\n"
-                f"🎯 Pick: <b>{p['pick']}</b>\n"
-                f"🔥 Confidence: <b>{p['confidence']}%</b>\n\n"
-            )
+            msg += f"⚽ <b>{p['match']}</b>\n🏆 {p['league']}\n🎯 Pick: <b>{p['pick']}</b>\n🔥 Confidence: <b>{p['confidence']}%</b>\n\n"
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "👤 My Account":
         status = "✅ Active until " + user["subscription_expires"][:10] if is_subscribed(user_id) else "❌ Not subscribed"
-        msg = (
-            f"<b>👤 My Account</b>\n\n"
-            f"Name: {user['first_name']}\n"
-            f"User ID: <code>{user_id}</code>\n"
-            f"Subscription: {status}\n"
-            f"Referrals: {user['referral_count']}\n"
-            f"Referral Code: <code>{user['referral_code']}</code>"
-        )
+        msg = f"<b>👤 My Account</b>\n\nName: {user['first_name']}\nUser ID: <code>{user_id}</code>\nSubscription: {status}\nReferrals: {user['referral_count']}\nReferral Code: <code>{user['referral_code']}</code>"
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text.isdigit() and "fixtures" in context.user_data:
@@ -134,12 +100,10 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("Invalid number. Please try again.")
 
-
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     activate_subscription(user_id)
     await update.message.reply_text("✅ Subscription activated for 30 days! (Demo mode)")
-
 
 def main():
     init_db()
@@ -151,7 +115,6 @@ def main():
 
     print("Bot is starting...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
-
 
 if __name__ == "__main__":
     main()
