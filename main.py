@@ -95,7 +95,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("subscribe", subscribe_command))
-    app.add_handler(MessageHandler(filters.TEXT & \~filters.COMMAND, handle_menu))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
