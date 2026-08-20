@@ -2,18 +2,26 @@ import sqlite3
 import secrets
 from datetime import datetime, timedelta
 from contextlib import contextmanager
+import time
 
 DB_PATH = "bot.db"
 
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = None
     try:
+        conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL;")
         yield conn
         conn.commit()
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise e
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def init_db():
     with get_db() as conn:
@@ -44,7 +52,9 @@ def get_or_create_user(user_id: int, username: str = None, first_name: str = Non
         )
         if referred_by:
             conn.execute("UPDATE users SET referral_count = referral_count + 1 WHERE user_id = ?", (referred_by,))
-        return get_or_create_user(user_id)
+        
+        row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+        return dict(row)
 
 def is_subscribed(user_id: int) -> bool:
     with get_db() as conn:
