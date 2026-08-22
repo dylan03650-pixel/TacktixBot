@@ -64,7 +64,7 @@ async def show_leagues(update: Update, context: ContextTypes.DEFAULT_TYPE, page:
         await update.message.reply_text(text, reply_markup=reply_markup)
 
 
-async def show_matches(update: Update, context: ContextTypes.DEFAULT_TYPE, league_id: int):
+async def show_matches(update: Update, context: ContextTypes.DEFAULT_TYPE, league_id: str):
     query = update.callback_query
     await query.answer()
 
