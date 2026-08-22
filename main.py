@@ -118,7 +118,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_leagues(update, context, page)
 
     elif data.startswith("league_"):
-        league_id = int(data.split("_")[1])
+        league_id = (data.split("_")[1])
         await show_matches(update, context, league_id)
 
     elif data.startswith("match_"):
