@@ -1,40 +1,60 @@
 import aiohttp
-from datetime import date
+from datetime import date, datetime, timedelta
 from config import API_FOOTBALL_KEY, TOP_LEAGUES
 
-async def get_todays_fixtures():
-    if not API_FOOTBALL_KEY:
-        return _mock_fixtures()
-    
-    today = date.today().isoformat()
+HEADERS = {
+    "x-apisports-key": API_FOOTBALL_KEY
+}
+
+async def get_leagues_list():
+    """Return list of top leagues as (id, name)"""
+    return list(TOP_LEAGUES.items())
+
+
+async def get_fixtures_by_league(league_id: int, days: int = 3):
+    """
+    Get fixtures for a league for today + next few days.
+    Returns list of matches.
+    """
     fixtures = []
-    
+    today = date.today()
+
     async with aiohttp.ClientSession() as session:
-        for league_id, league_name in TOP_LEAGUES.items():
-            url = f"https://v3.football.api-sports.io/fixtures?league={league_id}&season=2025&date={today}"
-            headers = {"x-apisports-key": API_FOOTBALL_KEY}
+        for i in range(days):
+            check_date = (today + timedelta(days=i)).isoformat()
+            url = f"https://v3.football.api-sports.io/fixtures?league={league_id}&season=2025&date={check_date}"
+
             try:
-                async with session.get(url, headers=headers) as resp:
+                async with session.get(url, headers=HEADERS) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         for item in data.get("response", []):
-                            fixtures.append({
-                                "id": item["fixture"]["id"],
-                                "league": league_name,
-                                "home": item["teams"]["home"]["name"],
-                                "away": item["teams"]["away"]["name"],
-                                "time": item["fixture"]["date"][11:16],
-                                "status": item["fixture"]["status"]["short"],
-                            })
-            except Exception:
-                continue
-    return fixtures if fixtures else _mock_fixtures()
+                            fixture = item.get("fixture", {})
+                            teams = item.get("teams", {})
+                            league = item.get("league", {})
 
-def _mock_fixtures():
-    return [
-        {"id": 1, "league": "Premier League", "home": "Arsenal", "away": "Chelsea", "time": "19:00", "status": "NS"},
-        {"id": 2, "league": "La Liga", "home": "Real Madrid", "away": "Barcelona", "time": "20:00", "status": "NS"},
-        {"id": 3, "league": "Serie A", "home": "Inter", "away": "Juventus", "time": "18:45", "status": "NS"},
-        {"id": 4, "league": "Bundesliga", "home": "Bayern Munich", "away": "Dortmund", "time": "17:30", "status": "NS"},
-        {"id": 5, "league": "Ligue 1", "home": "PSG", "away": "Marseille", "time": "20:45", "status": "NS"},
-                              ]
+                            fixtures.append({
+                                "id": fixture.get("id"),
+                                "date": fixture.get("date", "")[:16].replace("T", " "),
+                                "status": fixture.get("status", {}).get("short", "NS"),
+                                "home": teams.get("home", {}).get("name", "Home"),
+                                "away": teams.get("away", {}).get("name", "Away"),
+                                "league": league.get("name", "Unknown"),
+                                "league_id": league_id,
+                            })
+            except Exception as e:
+                print(f"Error fetching fixtures: {e}")
+                continue
+
+    return fixtures
+
+
+async def get_fixture_details(fixture_id: int):
+    """Get more details for a specific match (optional)"""
+    url = f"https://v3.football.api-sports.io/fixtures?id={fixture_id}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=HEADERS) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return data.get("response", [])
+    return []
