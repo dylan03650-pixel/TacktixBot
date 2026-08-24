@@ -76,28 +76,30 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Real stories from TacktixBot users will appear here soon.\n\n"
             "Stay tuned for authentic feedback and success stories 🔥"
         )
-        await update.message.reply_text(msg, parse_mode="HTML")
-        await update.message.reply_text(msg, parse_mode="HTML")
+
+     await update.message.reply_text(msg, parse_mode="HTML")
+
 
     elif text == "📰 Current News":
         enabled = is_news_enabled(user_id)
-        status = "✅ ON" if enabled else "❌ OFF"
+        status = "✅ Enabled" if enabled else "❌ Disabled"
 
         keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("🔔 Turn ON Auto News", callback_data="news_on"),
-                InlineKeyboardButton("🔕 Turn OFF Auto News", callback_data="news_off")
+                InlineKeyboardButton("🔔 Enable Auto News", callback_data="news_on"),
+                InlineKeyboardButton("🔕 Disable Auto News", callback_data="news_off")
             ],
-            [InlineKeyboardButton("📄 Show Latest News", callback_data="show_news")]
+            [InlineKeyboardButton("📄 View Latest News", callback_data="show_news")]
         ])
 
         msg = (
-            f"📰 <b>Current News</b>\n\n"
-            f"Auto News Status: {status}\n\n"
-            "• Turn ON → Bot will send you top football news every 2-3 hours\n"
-            "• Turn OFF → Stop receiving automatic news\n"
-            "• Show Latest News → Get the newest updates now"
+            "📰 <b>Current News</b>\n\n"
+            f"Auto News: {status}\n\n"
+            "• Enable → Receive top football news every 2-3 hours\n"
+            "• Disable → Stop automatic updates\n"
+            "• View Latest → Get today’s top stories now"
         )
+        await update.message.reply_text(msg, reply_markup=keyboard, parse_mode="HTML")
         await update.message.reply_text(msg, reply_markup=keyboard, parse_mode="HTML")
 
     elif text == "👤 My Account":
