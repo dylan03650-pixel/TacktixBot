@@ -6,9 +6,6 @@ from database import (
     init_db, get_or_create_user, is_subscribed, activate_subscription,
     get_user, get_user_by_referral_code, set_news_enabled, is_news_enabled
 )
-from football_data import get_fixtures_by_league
-from ai_predictor import generate_analysis, get_trending_picks
-from datetime import datetime
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
@@ -46,13 +43,15 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "💰 Deposit":
         msg = (
-            "💰 <b>Deposit</b>\n\n"
-            "Monthly Plan: <b>₦15,000</b>\n\n"
-            "Click the link below to deposit on our official site:\n\n"
-            "👉 https://re-direct.base44.app/\n\n"
-            "After successful payment, your account will be upgraded."
+            "💰 <b>Deposit & Subscribe</b>\n\n"
+            "📦 <b>Monthly Plan:</b> ₦15,000\n\n"
+            "Unlock full access and premium features.\n\n"
+            "👉 <b>Official Payment Link:</b>\n"
+            "https://re-direct.base44.app/\n\n"
+            "After successful payment, your account will be upgraded automatically."
         )
         await update.message.reply_text(msg, parse_mode="HTML")
+
     elif text == "🔗 Referral":
         code = user["referral_code"]
         bot_username = (await context.bot.get_me()).username
@@ -68,7 +67,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Share it with friends and earn rewards! 🚀"
         )
         await update.message.reply_text(msg, parse_mode="HTML")
-        await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "🙌 Testimonials":
         msg = (
@@ -76,9 +74,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Real stories from TacktixBot users will appear here soon.\n\n"
             "Stay tuned for authentic feedback and success stories 🔥"
         )
-
-     await update.message.reply_text(msg, parse_mode="HTML")
-
+        await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "📰 Current News":
         enabled = is_news_enabled(user_id)
@@ -100,20 +96,19 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• View Latest → Get today’s top stories now"
         )
         await update.message.reply_text(msg, reply_markup=keyboard, parse_mode="HTML")
-        await update.message.reply_text(msg, reply_markup=keyboard, parse_mode="HTML")
 
     elif text == "👤 My Account":
         plan = "✅ Subscribed" if is_subscribed(user_id) else "🆓 Free Plan"
         joined = user.get("created_at", "Unknown")[:10] if user.get("created_at") else "Unknown"
 
         msg = (
-            f"👤 <b>My Account</b>\n\n"
-            f"Name: {user['first_name']}\n"
-            f"User ID: <code>{user_id}</code>\n"
-            f"Date Joined: {joined}\n"
-            f"Current Plan: {plan}\n"
-            f"Referrals: {user['referral_count']}\n"
-            f"Referral Code: <code>{user['referral_code']}</code>"
+            "👤 <b>My Account</b>\n\n"
+            f"👤 Name: <b>{user['first_name']}</b>\n"
+            f"🆔 User ID: <code>{user_id}</code>\n"
+            f"📅 Date Joined: <b>{joined}</b>\n"
+            f"💎 Current Plan: <b>{plan}</b>\n"
+            f"👥 Referrals: <b>{user['referral_count']}</b>\n"
+            f"🔗 Referral Code: <code>{user['referral_code']}</code>"
         )
         await update.message.reply_text(msg, parse_mode="HTML")
 
@@ -174,14 +169,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{item['summary']}\n"
                 f"<a href='{item['link']}'>Read more →</a>\n\n"
             )
-
         msg += "_News updates regularly. Stay tuned!_"
 
-        await query.edit_message_text(
-            msg,
-            parse_mode="HTML",
-            disable_web_page_preview=False
-    )
+        await query.edit_message_text(msg, parse_mode="HTML", disable_web_page_preview=False)
+
 
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     activate_subscription(update.effective_user.id)
@@ -194,7 +185,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("subscribe", subscribe_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
+    app.add_handler(MessageHandler(filters.TEXT & \~filters.COMMAND, handle_menu))
     app.add_handler(CallbackQueryHandler(button_handler))
 
     print("TacktixBot is starting...")
