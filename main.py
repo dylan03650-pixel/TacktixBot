@@ -58,22 +58,25 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_username = (await context.bot.get_me()).username
         link = f"https://t.me/{bot_username}?start=ref_{code}"
         count = user["referral_count"]
+
         msg = (
-            f"🔗 <b>Your Referral Program</b>\n\n"
-            f"Your unique link:\n<code>{link}</code>\n\n"
-            f"People invited: <b>{count}</b>\n"
-            f"Invite <b>30</b> friends → Get <b>30% off</b> forever\n\n"
-            "Share the link with friends!"
+            "🔗 <b>Referral Program</b>\n\n"
+            f"👥 People invited: <b>{count}</b>\n"
+            f"🎁 Invite <b>30 friends</b> → Get <b>30% OFF</b> forever\n\n"
+            "Your unique referral link:\n"
+            f"<code>{link}</code>\n\n"
+            "Share it with friends and earn rewards! 🚀"
         )
+        await update.message.reply_text(msg, parse_mode="HTML")
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "🙌 Testimonials":
         msg = (
             "🙌 <b>Testimonials</b>\n\n"
-            "Coming soon!\n\n"
-            "Real stories from TacktixBot users will appear here.\n"
-            "Stay tuned 🔥"
+            "Real stories from TacktixBot users will appear here soon.\n\n"
+            "Stay tuned for authentic feedback and success stories 🔥"
         )
+        await update.message.reply_text(msg, parse_mode="HTML")
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "📰 Current News":
