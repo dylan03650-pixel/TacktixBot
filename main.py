@@ -70,12 +70,16 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "🙌 Testimonials":
-        msg = (
-            "🙌 <b>Testimonials</b>\n\n"
-            "Real stories from TacktixBot users will appear here soon.\n\n"
-            "Stay tuned for authentic feedback and success stories 🔥"
-        )
-        await update.message.reply_text(msg, parse_mode="HTML")
+        from testimonials import get_random_testimonials
+        selected = get_random_testimonials(5)
+
+        for item in selected:
+            caption = f"⭐️⭐️⭐️⭐️⭐️\n\n\"{item['text']}\"\n\n– {item['name']}"
+            try:
+                await update.message.reply_photo(photo=item["image"], caption=caption)
+            except Exception:
+                # fallback if photo fails
+                await update.message.reply_text(caption)
 
     elif text == "📰 Current News":
         enabled = is_news_enabled(user_id)
