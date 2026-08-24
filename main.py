@@ -47,12 +47,12 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "💰 Deposit":
         msg = (
             "💰 <b>Deposit</b>\n\n"
+            "Monthly Plan: <b>₦15,000</b>\n\n"
             "Click the link below to deposit on our official site:\n\n"
             "👉 https://re-direct.base44.app/\n\n"
-            "After depositing, your plan will be updated automatically."
+            "After successful payment, your account will be upgraded."
         )
         await update.message.reply_text(msg, parse_mode="HTML")
-
     elif text == "🔗 Referral":
         code = user["referral_code"]
         bot_username = (await context.bot.get_me()).username
