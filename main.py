@@ -1,16 +1,20 @@
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-from config import BOT_TOKEN, TOP_LEAGUES
-from database import init_db, get_or_create_user, is_subscribed, activate_subscription, get_user, get_user_by_referral_code
-from football_data import get_leagues_list, get_fixtures_by_league
+from config import BOT_TOKEN
+from database import (
+    init_db, get_or_create_user, is_subscribed, activate_subscription,
+    get_user, get_user_by_referral_code, set_news_enabled, is_news_enabled
+)
+from football_data import get_fixtures_by_league
 from ai_predictor import generate_analysis, get_trending_picks
+from datetime import datetime
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 MAIN_KEYBOARD = ReplyKeyboardMarkup([
     [KeyboardButton("💰 Deposit"), KeyboardButton("🔗 Referral")],
-    [KeyboardButton("📊 Analyse"), KeyboardButton("🔥 Trending Offers")],
+    [KeyboardButton("🙌 Testimonials"), KeyboardButton("📰 Current News")],
     [KeyboardButton("👤 My Account")]
 ], resize_keyboard=True)
 
@@ -26,108 +30,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if ref_user and ref_user["user_id"] != user.id:
                 referred_by = ref_user["user_id"]
     get_or_create_user(user.id, user.username, user.first_name, referred_by)
-    text = f"⚽ Welcome {user.first_name}!\n\nAI Football Predictor is ready.\nUse the buttons below."
-    await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD)
 
-
-async def show_leagues(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 0):
-    leagues = list(TOP_LEAGUES.items())
-    per_page = 10
-    start = page * per_page
-    end = start + per_page
-    current = leagues[start:end]
-
-    keyboard = []
-    row = []
-    for i, (league_id, name) in enumerate(current):
-        row.append(InlineKeyboardButton(name, callback_data=f"league_{league_id}"))
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-
-    nav = []
-    if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"page_{page-1}"))
-    if end < len(leagues):
-        nav.append(InlineKeyboardButton("➡️ Next", callback_data=f"page_{page+1}"))
-    if nav:
-        keyboard.append(nav)
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    text = f"📊 Select a League\n\nPage {page+1}"
-
-    if update.callback_query:
-        await update.callback_query.edit_message_text(text, reply_markup=reply_markup)
-    else:
-        await update.message.reply_text(text, reply_markup=reply_markup)
-
-
-async def show_matches(update: Update, context: ContextTypes.DEFAULT_TYPE, league_id: str):
-    query = update.callback_query
-    await query.answer()
-
-    await query.edit_message_text("⏳ Loading matches...")
-
-    fixtures = await get_fixtures_by_league(league_id, days=2)
-
-    if not fixtures:
-        await query.edit_message_text("No matches found in the next 2 days for this league.")
-        return
-
-    keyboard = []
-    for match in fixtures[:12]:
-        btn_text = f"{match['home']} vs {match['away']}"
-        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"match_{match['id']}_{league_id}")])
-
-    keyboard.append([InlineKeyboardButton("🔙 Back to Leagues", callback_data="back_leagues")])
-
-    context.user_data["fixtures"] = {str(m["id"]): m for m in fixtures}
-
-    league_name = TOP_LEAGUES.get(league_id, "League")
-    await query.edit_message_text(
-        f"🏆 {league_name}\nSelect a match:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    text = (
+        f"⚽ Welcome to <b>TacktixBot</b>, {user.first_name}!\n\n"
+        "Your football companion for news, insights and more.\n"
+        "Use the buttons below to get started."
     )
-
-
-async def show_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE, fixture_id: str):
-    query = update.callback_query
-    await query.answer()
-
-    fixtures = context.user_data.get("fixtures", {})
-    match = fixtures.get(fixture_id)
-
-    if not match:
-        await query.edit_message_text("Match data not found. Please try again.")
-        return
-
-    analysis = generate_analysis(match)
-    keyboard = [[InlineKeyboardButton("🔙 Back to Matches", callback_data=f"league_{match['league_id']}")]]
-
-    await query.edit_message_text(analysis, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
-
-
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    data = query.data
-
-    if data.startswith("page_"):
-        page = int(data.split("_")[1])
-        await show_leagues(update, context, page)
-
-    elif data.startswith("league_"):
-        league_id = (data.split("_")[1])
-        await show_matches(update, context, league_id)
-
-    elif data.startswith("match_"):
-        parts = data.split("_")
-        fixture_id = parts[1]
-        await show_analysis(update, context, fixture_id)
-
-    elif data == "back_leagues":
-        await show_leagues(update, context, 0)
+    await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD, parse_mode="HTML")
 
 
 async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,40 +45,105 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(user_id)
 
     if text == "💰 Deposit":
-        status = "Active" if is_subscribed(user_id) else "Not subscribed"
-        msg = f"💰 Deposit Menu\n\nPrice: $9.99/month\nStatus: {status}\n\nSend /subscribe to activate (demo)"
-        await update.message.reply_text(msg)
+        msg = (
+            "💰 <b>Deposit</b>\n\n"
+            "Click the link below to deposit on our official site:\n\n"
+            "👉 https://re-direct.base44.app/\n\n"
+            "After depositing, your plan will be updated automatically."
+        )
+        await update.message.reply_text(msg, parse_mode="HTML")
 
     elif text == "🔗 Referral":
         code = user["referral_code"]
         bot_username = (await context.bot.get_me()).username
         link = f"https://t.me/{bot_username}?start=ref_{code}"
-        msg = f"🔗 Your Referral Link:\n{link}\n\nInvited: {user['referral_count']}\nInvite 30 people for 15% off"
-        await update.message.reply_text(msg)
+        count = user["referral_count"]
+        msg = (
+            f"🔗 <b>Your Referral Program</b>\n\n"
+            f"Your unique link:\n<code>{link}</code>\n\n"
+            f"People invited: <b>{count}</b>\n"
+            f"Invite <b>30</b> friends → Get <b>30% off</b> forever\n\n"
+            "Share the link with friends!"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML")
 
-    elif text == "📊 Analyse":
-        if not is_subscribed(user_id):
-            await update.message.reply_text("🔒 You need an active subscription.\nSend /subscribe to activate (demo).")
-            return
-        await show_leagues(update, context, 0)
+    elif text == "🙌 Testimonials":
+        msg = (
+            "🙌 <b>Testimonials</b>\n\n"
+            "Coming soon!\n\n"
+            "Real stories from TacktixBot users will appear here.\n"
+            "Stay tuned 🔥"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML")
 
-    elif text == "🔥 Trending Offers":
-        if not is_subscribed(user_id):
-            await update.message.reply_text("🔒 Subscription required.\nSend /subscribe")
-            return
-        await update.message.reply_text("🔥 Generating best AI picks...")
-        # For trending we can use a default league or improve later
-        await update.message.reply_text("Trending feature will be improved next. Use Analyse for now.")
+    elif text == "📰 Current News":
+        enabled = is_news_enabled(user_id)
+        status = "✅ ON" if enabled else "❌ OFF"
+
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🔔 Turn ON Auto News", callback_data="news_on"),
+                InlineKeyboardButton("🔕 Turn OFF Auto News", callback_data="news_off")
+            ],
+            [InlineKeyboardButton("📄 Show Latest News", callback_data="show_news")]
+        ])
+
+        msg = (
+            f"📰 <b>Current News</b>\n\n"
+            f"Auto News Status: {status}\n\n"
+            "• Turn ON → Bot will send you top football news every 2-3 hours\n"
+            "• Turn OFF → Stop receiving automatic news\n"
+            "• Show Latest News → Get the newest updates now"
+        )
+        await update.message.reply_text(msg, reply_markup=keyboard, parse_mode="HTML")
 
     elif text == "👤 My Account":
-        status = "Active" if is_subscribed(user_id) else "Not subscribed"
-        msg = f"👤 Account\nName: {user['first_name']}\nStatus: {status}\nReferrals: {user['referral_count']}"
-        await update.message.reply_text(msg)
+        plan = "✅ Subscribed" if is_subscribed(user_id) else "🆓 Free Plan"
+        joined = user.get("created_at", "Unknown")[:10] if user.get("created_at") else "Unknown"
+
+        msg = (
+            f"👤 <b>My Account</b>\n\n"
+            f"Name: {user['first_name']}\n"
+            f"User ID: <code>{user_id}</code>\n"
+            f"Date Joined: {joined}\n"
+            f"Current Plan: {plan}\n"
+            f"Referrals: {user['referral_count']}\n"
+            f"Referral Code: <code>{user['referral_code']}</code>"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML")
+
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    data = query.data
+
+    if data == "news_on":
+        set_news_enabled(user_id, True)
+        await query.edit_message_text("✅ Auto News has been turned <b>ON</b>.\nYou will receive top football news every 2-3 hours.", parse_mode="HTML")
+
+    elif data == "news_off":
+        set_news_enabled(user_id, False)
+        await query.edit_message_text("🔕 Auto News has been turned <b>OFF</b>.", parse_mode="HTML")
+
+    elif data == "show_news":
+        # Temporary sample news (we can connect real news later)
+        news = (
+            "📰 <b>Latest Football News</b>\n\n"
+            "• Premier League: Major injury update for a top club\n"
+            "• La Liga: Big transfer rumor heating up\n"
+            "• Serie A: Coach under pressure after recent results\n"
+            "• Champions League: Key player returns to training\n"
+            "• Bundesliga: Surprise early-season form\n\n"
+            "_News updates daily. Real live news source coming soon._"
+        )
+        await query.edit_message_text(news, parse_mode="HTML")
 
 
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     activate_subscription(update.effective_user.id)
-    await update.message.reply_text("✅ Subscription activated for 30 days (Demo)")
+    await update.message.reply_text("✅ Subscription activated for 30 days! (Demo)")
 
 
 def main():
@@ -178,10 +152,10 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("subscribe", subscribe_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
+    app.add_handler(MessageHandler(filters.TEXT & \~filters.COMMAND, handle_menu))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    print("Bot is starting...")
+    print("TacktixBot is starting...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
