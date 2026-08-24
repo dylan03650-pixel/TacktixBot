@@ -32,9 +32,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_or_create_user(user.id, user.username, user.first_name, referred_by)
 
     text = (
-        f"⚽ Welcome to <b>TacktixBot</b>, {user.first_name}!\n\n"
-        "Your football companion for news, insights and more.\n"
-        "Use the buttons below to get started."
+        f"⚽ <b>Welcome to TacktixBot</b>, {user.first_name}!\n\n"
+        "Your smart football companion for news, insights & exclusive offers.\n\n"
+        "Use the menu below to explore 👇"
     )
     await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD, parse_mode="HTML")
 
