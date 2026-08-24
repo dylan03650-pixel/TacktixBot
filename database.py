@@ -2,7 +2,6 @@ import sqlite3
 import secrets
 from datetime import datetime, timedelta
 from contextlib import contextmanager
-import time
 
 DB_PATH = "bot.db"
 
@@ -35,6 +34,7 @@ def init_db():
             subscription_expires TEXT,
             balance REAL DEFAULT 0,
             referral_count INTEGER DEFAULT 0,
+            news_enabled INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """)
@@ -83,3 +83,15 @@ def get_user_by_referral_code(code: str):
     with get_db() as conn:
         row = conn.execute("SELECT * FROM users WHERE referral_code = ?", (code,)).fetchone()
         return dict(row) if row else None
+
+def set_news_enabled(user_id: int, enabled: bool):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE users SET news_enabled = ? WHERE user_id = ?",
+            (1 if enabled else 0, user_id)
+        )
+
+def is_news_enabled(user_id: int) -> bool:
+    with get_db() as conn:
+        row = conn.execute("SELECT news_enabled FROM users WHERE user_id = ?", (user_id,)).fetchone()
+        return bool(row and row["news_enabled"])
