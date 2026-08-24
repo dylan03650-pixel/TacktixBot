@@ -1,4 +1,6 @@
 import logging
+import aiohttp
+import re
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from config import BOT_TOKEN
@@ -57,7 +59,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_username = (await context.bot.get_me()).username
         link = f"https://t.me/{bot_username}?start=ref_{code}"
         count = user["referral_count"]
-
         msg = (
             "🔗 <b>Referral Program</b>\n\n"
             f"👥 People invited: <b>{count}</b>\n"
@@ -79,7 +80,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "📰 Current News":
         enabled = is_news_enabled(user_id)
         status = "✅ Enabled" if enabled else "❌ Disabled"
-
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("🔔 Enable Auto News", callback_data="news_on"),
@@ -87,7 +87,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [InlineKeyboardButton("📄 View Latest News", callback_data="show_news")]
         ])
-
         msg = (
             "📰 <b>Current News</b>\n\n"
             f"Auto News: {status}\n\n"
@@ -100,7 +99,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "👤 My Account":
         plan = "✅ Subscribed" if is_subscribed(user_id) else "🆓 Free Plan"
         joined = user.get("created_at", "Unknown")[:10] if user.get("created_at") else "Unknown"
-
         msg = (
             "👤 <b>My Account</b>\n\n"
             f"👤 Name: <b>{user['first_name']}</b>\n"
@@ -111,6 +109,42 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🔗 Referral Code: <code>{user['referral_code']}</code>"
         )
         await update.message.reply_text(msg, parse_mode="HTML")
+
+
+async def fetch_real_news():
+    feeds = [
+        "https://feeds.bbci.co.uk/sport/football/rss.xml",
+        "http://feeds.bbci.co.uk/sport/0/football/rss.xml",
+    ]
+    news = []
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    async with aiohttp.ClientSession() as session:
+        for url in feeds:
+            try:
+                async with session.get(url, headers=headers, timeout=10) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        items = re.findall(
+                            r"<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>.*?(?:<description>(.*?)</description>)?.*?</item>",
+                            text, re.DOTALL
+                        )
+                        for title, link, desc in items[:6]:
+                            title = re.sub(r"<!\[CDATA\[|\]\]>", "", title).strip()
+                            link = re.sub(r"<!\[CDATA\[|\]\]>", "", link).strip()
+                            summary = re.sub(r"<!\[CDATA\[|\]\]>|<.*?>", "", desc or "").strip()[:120]
+                            if title and link:
+                                news.append({
+                                    "title": title,
+                                    "link": link,
+                                    "summary": summary + "..." if summary else "Click to read full story."
+                                })
+                        if news:
+                            break
+            except Exception as e:
+                print(f"News fetch error: {e}")
+                continue
+    return news
 
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -135,15 +169,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "show_news":
         await query.edit_message_text("⏳ Fetching latest football news...")
-
         news_items = await fetch_real_news()
 
         if not news_items:
-            msg = (
-                "📰 <b>Today’s Top Football News</b>\n\n"
-                "Unable to fetch live news right now.\n"
-                "Please try again later."
-            )
+            msg = "📰 <b>Today’s Top Football News</b>\n\nUnable to fetch live news right now.\nPlease try again later."
         else:
             msg = "📰 <b>Today’s Top Football News</b>\n\n"
             for item in news_items[:5]:
@@ -154,51 +183,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             msg += "_News powered by BBC Sport & top sources_"
 
-        await query.edit_message_text(msg, parse_mode="HTML", disable_web_page_preview=False)
-
-
-async def fetch_real_news():
-    """Fetch real football news from BBC Sport RSS"""
-    import aiohttp
-    import re
-
-    feeds = [
-        "https://feeds.bbci.co.uk/sport/football/rss.xml",
-        "http://feeds.bbci.co.uk/sport/0/football/rss.xml",
-    ]
-
-    news = []
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    async with aiohttp.ClientSession() as session:
-        for url in feeds:
-            try:
-                async with session.get(url, headers=headers, timeout=10) as resp:
-                    if resp.status == 200:
-                        text = await resp.text()
-                        # Simple extraction of items
-                        items = re.findall(
-                            r"<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>.*?(?:<description>(.*?)</description>)?.*?</item>",
-                            text,
-                            re.DOTALL
-                        )
-                        for title, link, desc in items[:6]:
-                            title = re.sub(r"<!\[CDATA\[|\]\]>", "", title).strip()
-                            link = re.sub(r"<!\[CDATA\[|\]\]>", "", link).strip()
-                            summary = re.sub(r"<!\[CDATA\[|\]\]>|<.*?>", "", desc or "").strip()[:120]
-                            if title and link:
-                                news.append({
-                                    "title": title,
-                                    "link": link,
-                                    "summary": summary + "..." if summary else "Click to read full story."
-                                })
-                        if news:
-                            break
-            except Exception as e:
-                print(f"News fetch error: {e}")
-                continue
-
-    return news
         await query.edit_message_text(msg, parse_mode="HTML", disable_web_page_preview=False)
 
 
@@ -213,7 +197,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("subscribe", subscribe_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
+    app.add_handler(MessageHandler(filters.TEXT & \~filters.COMMAND, handle_menu))
     app.add_handler(CallbackQueryHandler(button_handler))
 
     print("TacktixBot is starting...")
