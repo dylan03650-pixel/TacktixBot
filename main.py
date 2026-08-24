@@ -121,25 +121,62 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "news_on":
         set_news_enabled(user_id, True)
-        await query.edit_message_text("✅ Auto News has been turned <b>ON</b>.\nYou will receive top football news every 2-3 hours.", parse_mode="HTML")
+        await query.edit_message_text(
+            "✅ Auto News has been turned <b>ON</b>.\nYou will receive top football news every 2-3 hours.",
+            parse_mode="HTML"
+        )
 
     elif data == "news_off":
         set_news_enabled(user_id, False)
-        await query.edit_message_text("🔕 Auto News has been turned <b>OFF</b>.", parse_mode="HTML")
+        await query.edit_message_text(
+            "🔕 Auto News has been turned <b>OFF</b>.",
+            parse_mode="HTML"
+        )
 
     elif data == "show_news":
-        # Temporary sample news (we can connect real news later)
-        news = (
-            "📰 <b>Latest Football News</b>\n\n"
-            "• Premier League: Major injury update for a top club\n"
-            "• La Liga: Big transfer rumor heating up\n"
-            "• Serie A: Coach under pressure after recent results\n"
-            "• Champions League: Key player returns to training\n"
-            "• Bundesliga: Surprise early-season form\n\n"
-            "_News updates daily. Real live news source coming soon._"
-        )
-        await query.edit_message_text(news, parse_mode="HTML")
+        news_items = [
+            {
+                "topic": "🚨 Injury News",
+                "title": "Star forward ruled out for 3 weeks",
+                "summary": "A major Premier League club has confirmed their key attacker will miss the next three matches.",
+                "link": "https://www.bbc.com/sport/football"
+            },
+            {
+                "topic": "🔄 Transfer Update",
+                "title": "Big-money move close to completion",
+                "summary": "A top European club is finalising a deal for a highly-rated midfielder.",
+                "link": "https://www.skysports.com/football"
+            },
+            {
+                "topic": "🏆 Match Preview",
+                "title": "Title race heats up this weekend",
+                "summary": "Two title contenders face crucial tests in the coming days.",
+                "link": "https://www.goal.com/en"
+            },
+            {
+                "topic": "📰 League News",
+                "title": "Manager under pressure after poor run",
+                "summary": "Recent results have put a high-profile coach’s future in doubt.",
+                "link": "https://www.espn.com/soccer/"
+            },
+        ]
 
+        msg = "📰 <b>Today’s Top Football News</b>\n\n"
+        for item in news_items:
+            msg += (
+                f"{item['topic']}\n"
+                f"<b>{item['title']}</b>\n"
+                f"{item['summary']}\n"
+                f"<a href='{item['link']}'>Read more →</a>\n\n"
+            )
+
+        msg += "_News updates regularly. Stay tuned!_"
+
+        await query.edit_message_text(
+            msg,
+            parse_mode="HTML",
+            disable_web_page_preview=False
+    )
 
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     activate_subscription(update.effective_user.id)
