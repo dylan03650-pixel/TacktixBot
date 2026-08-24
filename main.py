@@ -134,43 +134,71 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "show_news":
-        news_items = [
-            {
-                "topic": "🚨 Injury News",
-                "title": "Star forward ruled out for 3 weeks",
-                "summary": "A major Premier League club has confirmed their key attacker will miss the next three matches.",
-                "link": "https://www.bbc.com/sport/football"
-            },
-            {
-                "topic": "🔄 Transfer Update",
-                "title": "Big-money move close to completion",
-                "summary": "A top European club is finalising a deal for a highly-rated midfielder.",
-                "link": "https://www.skysports.com/football"
-            },
-            {
-                "topic": "🏆 Match Preview",
-                "title": "Title race heats up this weekend",
-                "summary": "Two title contenders face crucial tests in the coming days.",
-                "link": "https://www.goal.com/en"
-            },
-            {
-                "topic": "📰 League News",
-                "title": "Manager under pressure after poor run",
-                "summary": "Recent results have put a high-profile coach’s future in doubt.",
-                "link": "https://www.espn.com/soccer/"
-            },
-        ]
+        await query.edit_message_text("⏳ Fetching latest football news...")
 
-        msg = "📰 <b>Today’s Top Football News</b>\n\n"
-        for item in news_items:
-            msg += (
-                f"{item['topic']}\n"
-                f"<b>{item['title']}</b>\n"
-                f"{item['summary']}\n"
-                f"<a href='{item['link']}'>Read more →</a>\n\n"
+        news_items = await fetch_real_news()
+
+        if not news_items:
+            msg = (
+                "📰 <b>Today’s Top Football News</b>\n\n"
+                "Unable to fetch live news right now.\n"
+                "Please try again later."
             )
-        msg += "_News updates regularly. Stay tuned!_"
+        else:
+            msg = "📰 <b>Today’s Top Football News</b>\n\n"
+            for item in news_items[:5]:
+                msg += (
+                    f"🔹 <b>{item['title']}</b>\n"
+                    f"{item['summary']}\n"
+                    f"<a href='{item['link']}'>Read more →</a>\n\n"
+                )
+            msg += "_News powered by BBC Sport & top sources_"
 
+        await query.edit_message_text(msg, parse_mode="HTML", disable_web_page_preview=False)
+
+
+async def fetch_real_news():
+    """Fetch real football news from BBC Sport RSS"""
+    import aiohttp
+    import re
+
+    feeds = [
+        "https://feeds.bbci.co.uk/sport/football/rss.xml",
+        "http://feeds.bbci.co.uk/sport/0/football/rss.xml",
+    ]
+
+    news = []
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    async with aiohttp.ClientSession() as session:
+        for url in feeds:
+            try:
+                async with session.get(url, headers=headers, timeout=10) as resp:
+                    if resp.status == 200:
+                        text = await resp.text()
+                        # Simple extraction of items
+                        items = re.findall(
+                            r"<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>.*?(?:<description>(.*?)</description>)?.*?</item>",
+                            text,
+                            re.DOTALL
+                        )
+                        for title, link, desc in items[:6]:
+                            title = re.sub(r"<!\[CDATA\[|\]\]>", "", title).strip()
+                            link = re.sub(r"<!\[CDATA\[|\]\]>", "", link).strip()
+                            summary = re.sub(r"<!\[CDATA\[|\]\]>|<.*?>", "", desc or "").strip()[:120]
+                            if title and link:
+                                news.append({
+                                    "title": title,
+                                    "link": link,
+                                    "summary": summary + "..." if summary else "Click to read full story."
+                                })
+                        if news:
+                            break
+            except Exception as e:
+                print(f"News fetch error: {e}")
+                continue
+
+    return news
         await query.edit_message_text(msg, parse_mode="HTML", disable_web_page_preview=False)
 
 
